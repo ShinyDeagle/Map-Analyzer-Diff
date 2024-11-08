@@ -1,12 +1,12 @@
 // ==UserScript==
-// @name         AWBW Map Analyzer
+// @name         AWBW Map Analyzer - V3
 // @namespace    awbw
 // @match        https://awbw.amarriner.com/prevmaps.php*
 // @match        https://awbw.amarriner.com/editmap.php*
 // @icon         https://awbw.amarriner.com/terrain/followlist.gif
-// @version      0.2
+// @version      0.3
 // @description  Analyze unit movement in the map editor and map preview.
-// @author       steve
+// @author       steve, vesper
 // @license      MIT
 // @grant        none
 // @inject-into  page
@@ -131,6 +131,11 @@ BaseInfo.countries = {
         id: 24,
         name: "Noir Eclipse",
         color: "3, 3, 3"
+    },
+    sc: {
+        id: 25,
+        name: "Silver Claw",
+        color: "137, 168, 188"
     }
 }, BaseInfo.terrain = {
     1: {
@@ -1140,6 +1145,132 @@ BaseInfo.countries = {
         defense: 0,
         country: "",
         build_type: ""
+    },
+    196: {
+        name: "Azure Asteroid Airport",
+        defense: 3,
+        country: "aa",
+        build_type: "A"
+    },
+    197: {
+        name: "Azure Asteroid Base",
+        defense: 3,
+        country: "aa",
+        build_type: "L"
+    },
+    198: {
+        name: "Azure Asteroid City",
+        defense: 3,
+        country: "aa",
+        build_type: ""
+    },
+    199: {
+        name: "Azure Asteroid Com Tower",
+        defense: 3,
+        country: "aa",
+        build_type: ""
+    },
+    200: {
+        name: "Azure Asteroid HQ",
+        defense: 4,
+        country: "aa",
+        build_type: ""
+    },
+    201: {
+        name: "Azure Asteroid Lab",
+        defense: 3,
+        country: "aa",
+        build_type: ""
+    },
+    202: {
+        name: "Azure Asteroid Port",
+        defense: 3,
+        country: "aa",
+        build_type: "S"
+    },
+    203: {
+        name: "Noir Eclipse Airport",
+        defense: 3,
+        country: "ne",
+        build_type: "A"
+    },
+    204: {
+        name: "Noir Eclipse Base",
+        defense: 3,
+        country: "ne",
+        build_type: "L"
+    },
+    205: {
+        name: "Noir Eclipse City",
+        defense: 3,
+        country: "ne",
+        build_type: ""
+    },
+    206: {
+        name: "Noir Eclipse Com Tower",
+        defense: 3,
+        country: "ne",
+        build_type: ""
+    },
+    207: {
+        name: "Noir Eclipse HQ",
+        defense: 4,
+        country: "ne",
+        build_type: ""
+    },
+    208: {
+        name: "Noir Eclipse Lab",
+        defense: 3,
+        country: "ne",
+        build_type: ""
+    },
+    209: {
+        name: "Noir Eclipse Port",
+        defense: 3,
+        country: "ne",
+        build_type: "S"
+    },
+    210: {
+        name: "Silver Claw Airport",
+        defense: 3,
+        country: "sc",
+        build_type: "A"
+    },
+    211: {
+        name: "Silver Claw Base",
+        defense: 3,
+        country: "sc",
+        build_type: "L"
+    },
+    212: {
+        name: "Silver Claw City",
+        defense: 3,
+        country: "sc",
+        build_type: ""
+    },
+    213: {
+        name: "Silver Claw Com Tower",
+        defense: 3,
+        country: "sc",
+        build_type: ""
+    },
+    214: {
+        name: "Silver Claw HQ",
+        defense: 4,
+        country: "sc",
+        build_type: ""
+    },
+    215: {
+        name: "Silver Claw Lab",
+        defense: 3,
+        country: "sc",
+        build_type: ""
+    },
+    216: {
+        name: "Silver Claw Port",
+        defense: 3,
+        country: "sc",
+        build_type: "S"
     }
 }, BaseInfo.units = {
     1: {
@@ -5571,7 +5702,14 @@ class MapAnalyzer {
         return this.width = e, this.height = t, this.canvas.width = 16 * this.width, this.canvas.height = 16 * this.height, this.ctx = this.canvas.getContext("2d"), this.ctx.textAlign = "center", this.terrain = new Array(e * t), this.bases = {}, this.properties = new Array(e * t).fill(null), this.units = {}, this
     }
     init(e) {
-        this.canvas.style = "\n        pointer-events: none;\n        z-index: 200;\n        position: absolute;\n        top: 0;\n        left: 0;", (e = e ? ? document.getElementById("gamemap")).append(this.canvas), this.ctx = this.canvas.getContext("2d"), this.ctx.font = "12px monospace", this.ctx.textAlign = "center"
+        this.canvas.style = "\n        pointer-events: none;\n        z-index: 200;\n        position: absolute;\n        top: 0;\n        left: 0;";
+        e = e ?? document.getElementById("gamemap");
+        if (e) {
+            e.append(this.canvas);
+        }
+        this.ctx = this.canvas.getContext("2d");
+        this.ctx.font = "12px monospace";
+        this.ctx.textAlign = "center";
     }
     idToCountry(e) {
         return BaseInfo.terrain[e].country
@@ -5638,28 +5776,47 @@ class MapAnalyzer {
             }
         } else {
             if (!t) throw new Error("give me some tiles bro");
-            for (let e = 0; e < this.width; e++)
+            for (let e = 0; e < this.width; e++) {
                 for (let n = 0; n < this.height; n++) {
-                    const i = t[n + e * this.height].terrain_id;
-                    this.terrain[e + n * this.width] = i
+                    const index = n + e * this.height; // Calculate index
+                    let is_prop = t[index] == null;
+                    if (is_prop) {
+                        continue;
+                    }
+                    const i = t[index].terrain_id;
+                    this.terrain[e + n * this.width] = i;
                 }
+            }
         }
         return this
     }
-    getMoveCostGraph(e, t = "C") {
+    getMoveCostGraph(e, j, t = "C") {
         let n = new Array(this.width * this.height);
         const i = BaseInfo.moveCosts[t][e];
         for (let t = 0; t < this.height; t++)
             for (let o = 0; o < this.width; o++) {
+                // Vesper: Added code for the Bust Pipe Seam Function.
+                // Should return move cost value like it was broken if bustPipes (j) is on.
                 let r = this.terrain[o + t * this.width],
-                    a = i[r];
-                void 0 === a && (a = "S" === e || "L" === e ? -1 : 1), 0 === a && 195 !== r && (a = -1), n[o + t * this.width] = a
+                    a = i[r],
+                    bp = i[115];
+                let b = "S" === e || "L" === e;
+                let s = 113 === r || 114 === r;
+                void 0 === a && (a = b ? -1 : 1)
+                if (0 === a && 195 !== r) {
+                    a = -1;
+                }
+                if (j && s && !b) {
+                    a = bp;
+                }
+                n[o + t * this.width] = a;
             }
         return new WeightedDirectedGraph(n, this.width, this.height)
     }
     drawDistanceMap(e, t = 1 / 0, {
         showCost: n = !1,
-        bgColor: i
+        bgColor: i,
+        bustPipes: j = !0,
     } = {}) {
         let o = Math.min(t, e.reduce(((e, t) => Math.max(e, t || 0)), 1)),
             r = this.ctx;
@@ -5667,11 +5824,16 @@ class MapAnalyzer {
             for (let a = 0; a < this.width; a++) {
                 let s = e[a + t * this.width];
                 if (s >= 0 && s <= o) {
-                    if (i) r.fillStyle = `rgba(${i}, 0.15)`, r.strokeStyle = `rgba(${i}, 0.7)`;
-                    else {
+                    if (i) {
+                        r.fillStyle = `rgba(${i}, 0.15)`, r.strokeStyle = `rgba(${i}, 0.7)`;
+                    } else {
                         let e = Math.round(255 * s / o),
                             t = Math.round(255 * (o - s) / o);
                         r.fillStyle = `rgba(${e}, ${t}, 0, 0.15)`, r.strokeStyle = `rgba(${e}, ${t}, 0, 0.7)`
+                    }
+                    let id = this.terrain[a + t * this.width];
+                    if ((id == 113 || id == 114) && j) {
+                        r.fillStyle = `rgba(255, 25, 25, 0.4)`, r.strokeStyle = `rgba(255, 25, 25, 0.8)`;
                     }
                     r.fillRect(16 * a, 16 * t, 16, 16), r.lineWidth = 1, r.strokeRect(16 * a, 16 * t, 16, 16), n && (this.setFont(), this.drawText(s, 16 * a + 8, 16 * t + 12))
                 }
@@ -5681,16 +5843,17 @@ class MapAnalyzer {
     async drawUnitTurns(e, t = 3, {
         showAllTurns: n = !0,
         showBg: i = !1,
+        bustPipes: j = !0,
         colorMode: o = "Heatmap"
     } = {}) {
         this.dirty = !1, t = Math.min(t, 20);
         const r = e[0].id,
-            a = BaseInfo.units[r].move_type,
-            s = parseInt(BaseInfo.units[r].move_points),
-            l = BaseInfo.units[r].name,
-            d = this.getMoveCostGraph(a),
-            u = e,
-            p = await loadImage(`terrain/aw1/${e[0].country}${l.toLowerCase().replace(" ","")}.gif`);
+              a = BaseInfo.units[r].move_type,
+              s = parseInt(BaseInfo.units[r].move_points),
+              l = BaseInfo.units[r].name,
+              d = this.getMoveCostGraph(a, j),
+              u = e,
+              p = await loadImage(`terrain/aw1/${e[0].country}${l.toLowerCase().replace(" ","")}.gif`);
         let c = new Dijkstra(d, u, this.width, this.height).iterate(s);
         const y = this.ctx;
         if (i) {
@@ -5699,6 +5862,7 @@ class MapAnalyzer {
                 n = BaseInfo.countries[e[0].country].color
             }
             this.drawDistanceMap(c, t * s, {
+                bustPipes: j,
                 bgColor: n
             })
         }
@@ -5725,6 +5889,7 @@ class MapAnalyzer {
         turns: e = 1,
         showAllTurns: t = !1,
         showBg: n = !0,
+        bustPipes: j = !0,
         colorMode: i = "Heatmap"
     } = {}) {
         this.dirty = !1;
@@ -5742,6 +5907,7 @@ class MapAnalyzer {
             for (const a in r[o]) await this.drawUnitTurns(r[o][a], e, {
                 showAllTurns: t,
                 showBg: n,
+                bustPipes: j,
                 colorMode: i
             })
     }
@@ -5835,7 +6001,7 @@ class Dijkstra {
 
 function initPrevmaps() {
     Vue.component("PrevMapAnalyzer", {
-        template: "\n<div id='replay-misc-controls'>\n  <div ref='openBtn' class='flex v-center' style='padding: 0px 5px; cursor: pointer; user-select: none;' @click='open = !open'>\n    <img src='terrain/followlist.gif'/><b>Analyze</b>\n  </div>\n  <div v-show='open' class='flex col' style='position: absolute; z-index:210; top: 100px; right: 0px;'>\n    <div class='bordertitle flex' style='color: #fff; background: #06c; border: 1px black solid; padding: 4px; justify-content: space-between;'>\n      <div style=\"font-weight: bold; display: block; float: left;\">\n        Map Analyzer\n      </div>\n      <div style=\"cursor: pointer\" @click=\"open = false\">\n        <img width='16' src=\"terrain/close.png\"/>\n      </div>\n    </div>\n    <div style='background: #fff; border: 1px black solid; padding: 4px;'>\n      <div>\n        <button @click='toggleRendering(\"unitFlow\")'>{{ activeMode == 'unitFlow' ? 'Hide' : 'Show' }}</button> Unit flow\n      </div>\n      <div>\n        <label>Turns <input v-model.number='mode.unitFlow.turns' type='number' max='10' min='1' style='width:80px'/></label>\n        <button v-if='false' @click='swapSide()'>Swap</button>\n        <br>\n        <label><input type='checkbox' v-model='mode.unitFlow.showAllTurns'/>Show all turns</label>\n        <br>\n        <label><input type='checkbox' v-model='mode.unitFlow.showBg'/>Backdrop </label>\n        <select v-model='mode.unitFlow.colorMode'>\n          <option v-for='opt in colorModeOptions' :value='opt'>{{opt}}</option>\n        </select>\n      </div>\n      <hr>\n      <div style='width: 220px;'>\n        <img v-for='cc in countries'\n          style='width: 24px; margin: 1px; cursor: pointer;'\n          @click='selectCountry(cc)'\n          :src='\"terrain/aw1/\"+ cc +\"logo.gif\"'>\n      </div>\n      <div style='width: 210px;'>\n        <img v-for='unit, id in BaseInfo.units'\n            style='width:24px; cursor: pointer; margin: 4px;'\n            :style='{border: id == selectedUnit ? \"2px #2cf dashed\" : \"2px #ddd solid\"}'\n            @click='selectUnit(id)'\n            :src='\"terrain/aw1/\"+ selectedCountry +unit.name.toLowerCase().replace(\" \",\"\") + \".gif\"'>\n      </div>\n      <div>\n        <button @click='deleteAllUnits()'>Clear</button>\n      </div>\n    </div>\n  </div>\n</div>",
+        template: "\n<div id='replay-misc-controls'>\n  <div ref='openBtn' class='flex v-center' style='padding: 0px 5px; cursor: pointer; user-select: none;' @click='open = !open'>\n    <img src='terrain/followlist.gif'/><b>Analyze</b>\n  </div>\n  <div v-show='open' class='flex col' style='position: absolute; z-index:210; top: 100px; right: 0px;'>\n    <div class='bordertitle flex' style='color: #fff; background: #06c; border: 1px black solid; padding: 4px; justify-content: space-between;'>\n      <div style=\"font-weight: bold; display: block; float: left;\">\n        Map Analyzer - V3\n      </div>\n      <div style=\"cursor: pointer\" @click=\"open = false\">\n        <img width='16' src=\"terrain/close.png\"/>\n      </div>\n    </div>\n    <div style='background: #fff; border: 1px black solid; padding: 4px;'>\n      <div>\n        <button @click='toggleRendering(\"unitFlow\")'>{{ activeMode == 'unitFlow' ? 'Hide' : 'Show' }}</button> Unit Flow\n      </div>\n      <div>\n        <label>Turns: <input v-model.number='mode.unitFlow.turns' type='number' max='10' min='1' style='width:80px'/></label>\n        <button v-if='false' @click='swapSide()'>Swap</button>\n        <br>\n        <label><input type='checkbox' v-model='mode.unitFlow.showAllTurns'/>Show All Turns</label>\n        <br>\n        <label><input type='checkbox' v-model='mode.unitFlow.bustPipes'/>Bust Pipe Seams</label>\n        <br>\n        <label><input type='checkbox' v-model='mode.unitFlow.showBg'/>Backdrop: </label>\n        <select v-model='mode.unitFlow.colorMode'>\n          <option v-for='opt in colorModeOptions' :value='opt'>{{opt}}</option>\n        </select>\n      </div>\n      <hr>\n      <div style='width: 220px;'>\n        <img v-for='cc in countries'\n          style='width: 24px; margin: 1px; cursor: pointer;'\n          @click='selectCountry(cc)'\n          :src='\"terrain/aw1/\"+ cc +\"logo.gif\"'>\n      </div>\n      <div style='width: 210px;'>\n        <img v-for='unit, id in BaseInfo.units'\n            style='width:24px; cursor: pointer; margin: 4px;'\n            :style='{border: id == selectedUnit ? \"2px #2cf dashed\" : \"2px #ddd solid\"}'\n            @click='selectUnit(id)'\n            :src='\"terrain/aw1/\"+ selectedCountry +unit.name.toLowerCase().replace(\" \",\"\") + \".gif\"'>\n      </div>\n      <div>\n        <button @click='deleteAllUnits()'>Clear</button>\n      </div>\n    </div>\n  </div>\n</div>",
         props: {
             countries: Array
         },
@@ -5853,11 +6019,12 @@ function initPrevmaps() {
                         turns: 1,
                         showAllTurns: !1,
                         showBg: !0,
-                        colorMode: "Country"
+                        bustPipes: !0,
+                        colorMode: "Country",
                     },
                     capRoute: {
                         turns: 1
-                    }
+                    },
                 },
                 colorModeOptions: ["Country", "Heatmap"]
             }
@@ -5968,7 +6135,7 @@ function initPrevmaps() {
         n = window.mapWidth,
         i = window.mapHeight;
     for (let e = 0; e < n; e++)
-        for (let n = 0; n < i; n++) terrainInfo[e] ? .[n] ? t.push(terrainInfo[e][n]) : t.push(buildingsInfo[e][n]);
+        for (let n = 0; n < i; n++) terrainInfo[e] && terrainInfo[e][n] ? t.push(terrainInfo[e][n]) : t.push(buildingsInfo[e][n]);
     let o = Object.keys(BaseInfo.countries).map((e => e)).sort(((e, t) => BaseInfo.countries[e].id - BaseInfo.countries[t].id));
     window.mapAnalyzer = new MapAnalyzer, mapAnalyzer.init(), mapAnalyzer.resize(n, i), mapAnalyzer.setTerrain({
         tiles: t
@@ -5985,7 +6152,7 @@ function initPrevmaps() {
 
 function initEditmap() {
     Vue.component("EditMapAnalyzer", {
-        template: "\n<div id='replay-misc-controls'>\n  <div ref='openBtn' class='flex v-center' style='padding: 0px 5px; cursor: pointer; user-select: none;' @click='open = !open'>\n    <img src='terrain/followlist.gif'/><b>Analyze</b>\n  </div>\n  <div v-show='open' class='flex col' style='position: absolute; z-index:210; right: 212px;'>\n    <div class='bordertitle flex' style='color: #fff; background: #06c; border: 1px black solid; padding: 4px; justify-content: space-between;'>\n      <div style=\"font-weight: bold; display: block; float: left;\">\n        Map Analyzer\n      </div>\n      <div style=\"cursor: pointer\" @click=\"open = false\">\n        <img width='16' src=\"terrain/close.png\"/>\n      </div>\n    </div>\n    <div style='background: #fff; border: 1px black solid; padding: 4px;'>\n      <div>\n        <button @click='toggleRendering(\"unitFlow\")'>{{ activeMode == 'unitFlow' ? 'Hide' : 'Show' }}</button> Unit flow\n      </div>\n      <div>\n        <label>Turns <input v-model.number='mode.unitFlow.turns' type='number' max='10' min='1' style='width:80px'/></label>\n        <button v-if='false' @click='swapSide()'>Swap</button>\n        <br>\n        <label><input type='checkbox' v-model='mode.unitFlow.showAllTurns'/>Show all turns</label>\n        <br>\n        <label><input type='checkbox' v-model='mode.unitFlow.showBg'/>Backdrop </label>\n        <select v-model='mode.unitFlow.colorMode'>\n          <option v-for='opt in colorModeOptions' :value='opt'>{{opt}}</option>\n        </select>\n      </div>\n    </div>\n  </div>\n</div>",
+        template: "\n<div id='replay-misc-controls'>\n  <div ref='openBtn' class='flex v-center' style='padding: 0px 5px; cursor: pointer; user-select: none;' @click='open = !open'>\n    <img src='terrain/followlist.gif'/><b>Analyze</b>\n  </div>\n  <div v-show='open' class='flex col' style='position: absolute; z-index:210; right: 212px;'>\n    <div class='bordertitle flex' style='color: #fff; background: #06c; border: 1px black solid; padding: 4px; justify-content: space-between;'>\n      <div style=\"font-weight: bold; display: block; float: left;\">\n        Map Analyzer - V3\n      </div>\n      <div style=\"cursor: pointer\" @click=\"open = false\">\n        <img width='16' src=\"terrain/close.png\"/>\n      </div>\n    </div>\n    <div style='background: #fff; border: 1px black solid; padding: 4px;'>\n      <div>\n        <button @click='toggleRendering(\"unitFlow\")'>{{ activeMode == 'unitFlow' ? 'Hide' : 'Show' }}</button> Unit Flow\n      </div>\n      <div>\n        <label>Turns <input v-model.number='mode.unitFlow.turns' type='number' max='10' min='1' style='width:80px'/></label>\n        <button v-if='false' @click='swapSide()'>Swap</button>\n        <br>\n        <label><input type='checkbox' v-model='mode.unitFlow.showAllTurns'/>Show All Turns</label>\n        <br>\n        <label><input type='checkbox' v-model='mode.unitFlow.showBg'/>Backdrop </label>\n        <select v-model='mode.unitFlow.colorMode'>\n          <option v-for='opt in colorModeOptions' :value='opt'>{{opt}}</option>\n        </select>\n      </div>\n    </div>\n  </div>\n</div>",
         props: {},
         data: function() {
             return {
@@ -6084,7 +6251,7 @@ function initEditmap() {
             template: "<EditMapAnalyzer/>"
         })
     }), 100)
-}
+    }
 async function loadThisShit() {
     "undefined" == typeof Vue && await loadScript("js/vue.js"), await loadScript("js/tinyqueue.js"), "undefined" == typeof _ && await loadScript("js/lodash.min.js"), window.location.pathname.match("prevmaps.php") ? initPrevmaps() : window.location.pathname.match("editmap.php") && initEditmap()
 }
